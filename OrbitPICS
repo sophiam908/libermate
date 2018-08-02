@@ -1,0 +1,66 @@
+function [nPICS, rPICS] = OrbitsPICS
+% GPS and PICS orbits:
+
+
+
+RE = 6378.137; % RE in [km]
+mu = 398600.4418;  % Gravitational parameter in [km^3/s^2]
+
+
+nPICS = 6;      % Number of PICS satellites
+
+
+% Orbital radii (= semi-parameter for circular orbits):
+pPICS = ones(1, nPICS) .* (600.0 + RE);  % PICS orbital radius in [km]
+
+% Orbit eccentricities (circular, so e = 0)
+ePICS = zeros(1, nPICS);
+
+% Orbit Inclinations:
+iPICS = ones(1, nPICS) .* 98.6 .* pi./180.0;  % [radians]
+
+% Right ascensions of ascending nodes:
+OmegaPICS = ones(1, nPICS) .* 0.0 .* pi./180.0;  % [radians]
+
+% Orbit argments of perigee (circular, so w = 0)
+wPICS = zeros(1, nPICS);
+        
+% vPICS = 7.6 km/s, so with 100 km resolution at 600 km altitude in model,
+% we don't need anything better than 15 sec temporal resolution
+% TPICS (orbital period) = 96.7 min, so delta_nu(15 sec) = 0.01625 radians
+
+vPICS = sqrt(mu/pPICS(1)); % orbital velocity in [km/s]
+tPICS = 2.*pi.*sqrt(pPICS(1).^3./mu);  % PICS orbital period in [s]
+
+
+t = 0:15:tPICS; %#ok<BDSCI>
+nuPICS = vPICS.*t./pPICS(1);
+
+% Initialize orbit solution matrices:
+rPICS = zeros(3, length(nuPICS), nPICS);
+for tt = 1 : length(t)
+    for i = 1:nPICS
+        [rPICS(:,tt,i), ~] = randv(pPICS(i), ePICS(i), iPICS(i), OmegaPICS(i), wPICS(i), nuPICS(tt)+(i-1).*2.*pi/nPICS, mu);
+    end
+end
+%Confirm orbits look OK by plotting:
+figure 
+PlotEarthSimple
+hold on
+i = 1;
+
+r = rPICS(:,:,i);
+plot3(r(1,:)./RE, r(2,:)./RE, r(3,:)./RE, '-', 'Color', [0.5, 0.5, 0.5])
+%cmap = colormap(brewermap(nPICS,'Dark2'));
+cmap = colormap(autumn(nPICS));
+for i = 1:nPICS
+    r = rPICS(:,:,i);
+    plot3(r(1,1)./RE, r(2,1)./RE, r(3,1)./RE, 's', 'MarkerSize', 20, 'Color', cmap(i,:),'MarkerFaceColor', cmap(i,:))
+    %plot3(r(1,1)./RE, r(2,1)./RE, r(3,1)./RE, 's', 'MarkerSize', 20, 'Color', 'b','MarkerFaceColor', 'b')
+end
+
+text(-1,3,'CubeSat','color','k','fontsize',18)
+
+xlabel('x')
+ylabel('y')
+zlabel('z')
